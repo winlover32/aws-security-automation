@@ -1,5 +1,14 @@
-# aws-security-automation
-Collection of scripts and resources for DevSecOps and Automated Incident Response Security
+# CloudTrailRemediation
+Lambda function to automatically restart CloudTrail trail when stopped using AWS CloudTrail API StopLogging is issued.
+The script is built using a framework that have placeholders for
+*Priority Action
+*Alerting
+*Forensics
+**Countermeasures
+*Logging
+
+To read more about this framework please see [this blog](https://blogs.aws.amazon.com/security/post)
+
 
 
 ***
