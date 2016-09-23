@@ -74,19 +74,41 @@ def sendAlert(logdata):
 def forensic(logdata):
     # Placeholder for forensic.
     # Examples: Look for MFA, Look for previous violations, your corporate CIDR blocks etc.
-    remediationStatus = False
+    remediationStatus = True
+    
     # Placeholder for forensic like has the user done this before etc
     # Set remediationStatus to True to trigger remediation function
     if remediationStatus: #If needed, disable users access keys
-        result = disableAccount(logData['userArn'])
-        return result
-    else:
-        return "NoRemediationNeeded"
+        # Find table
+        response = client.list_tables()
+        logTable = ""
+        for i in range(len(response['TableNames'])):
+            if response['TableNames'][i].startswith( 'lab5' ):
+                logTable = response['TableNames'][i]
+        # See is user have tried this before
+        response = client.get_item(
+            TableName=logTable,
+            Key={
+                'userName': {'S':logdata['userName']}
+            }
+        )
+        try:
+            if response['Item']:
+                result = disableAccount(logdata['userName'])
+                return result
+        except: 
+            # First time incident
+            return "NoRemediationNeeded"
 
 
-def disableAccount(userArn):
+def disableAccount(userName):
     print "No action added"
         # Deactivate AccessKey or add deny policy using iam
+        response = client.put_user_policy(
+            UserName=userName,
+            PolicyName='BlockPolicy',
+            PolicyDocument={"Version":"2012-10-17","Statement":{"Effect":"Deny","Action":"*","Resource":"*"}}
+        )
     return 0
 
 
@@ -95,7 +117,8 @@ def logEvent(logData):
     resource = boto3.resource('dynamodb')
 
     # Name of the table to use
-    logTable = 'cweCloudTrailLog'
+    response = client.list_tables()
+    logTable = "cweCloudTrailLog"
 
     # Verify that the table exists
     tableExists = False
@@ -114,7 +137,7 @@ def logEvent(logData):
                 {'AttributeName': 'userName', 'AttributeType': 'S' },
                 {'AttributeName': 'eventTime', 'AttributeType': 'S' }
             ],
-            ProvisionedThroughput={'ReadCapacityUnits': 1,'WriteCapacityUnits': 1}
+            ProvisionedThroughput={'ReadCapacityUnits': 5,'WriteCapacityUnits': 5}
         )
 
         # Wait for table creation
