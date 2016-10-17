@@ -11,6 +11,13 @@
             "Resource": "*"
         },
         {
+            "Action": [
+                "iam:PutUserPolicy"
+            ],
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
             "Effect": "Allow",
             "Action": [
                 "logs:CreateLogGroup",
