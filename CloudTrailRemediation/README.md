@@ -7,7 +7,7 @@ The script is built using a framework that have placeholders for
 **Countermeasures
 *Logging
 
-To read more about this framework please see [this blog](https://blogs.aws.amazon.com/security/post)
+This script will be featured in a upcoming blog about AIRR - Automatic Incident Response Remediation. This file will be updated with the correct link once published.
 
 
 

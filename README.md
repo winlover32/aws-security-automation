@@ -1,5 +1,5 @@
 # aws-security-automation
-Collection of scripts and resources for DevSecOps and Automated Incident Response Security
+Collection of scripts and resources for DevSecOps, Security Automation and Automated Incident Response Remediation
 
 
 ***
