@@ -13,6 +13,8 @@ client = boto3.client('cloudtrail')
 
 def lambda_handler(event, context):
 
+    logTable = "cweCloudTrailLog"
+
     # Extract user info from the event
     trailArn = event['detail']['requestParameters']['name']
     try:
@@ -83,9 +85,9 @@ def forensic(logdata):
         response = client.list_tables()
         logTable = ""
         for i in range(len(response['TableNames'])):
-            if response['TableNames'][i].startswith( 'lab5' ):
+            if logTable in response['TableNames'][i]:
                 logTable = response['TableNames'][i]
-        # See is user have tried this before
+        # See if user have tried this before
         response = client.get_item(
             TableName=logTable,
             Key={
@@ -118,7 +120,6 @@ def logEvent(logData):
 
     # Name of the table to use
     response = client.list_tables()
-    logTable = "cweCloudTrailLog"
 
     # Verify that the table exists
     tableExists = False
