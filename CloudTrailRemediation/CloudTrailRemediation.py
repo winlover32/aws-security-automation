@@ -37,11 +37,11 @@ def lambda_handler(event, context):
     result = sendAlert(logData)
 
     # Forensics
-    logTable = verifyLogTable()
-    result = forensic(logData, logTable)
+    realTable = verifyLogTable()
+    result = forensic(logData, realTable)
 
     # Logging
-    result = logEvent(logData, logTable)
+    result = logEvent(logData, realTable)
     return result
 
 
@@ -49,10 +49,12 @@ def verifyLogTable():
     # Find table
     client = boto3.client('dynamodb')
     response = client.list_tables()
+    table = LOGTABLE
     for i in range(len(response['TableNames'])):
-        if LOGTABLE in response['TableNames'][i]:
-            return response['TableNames'][i]
-    return LOGTABLE
+        if table in response['TableNames'][i]:
+            table = response['TableNames'][i]
+    return table
+
 
 def startTrail(trailArn):
     client = boto3.client('cloudtrail')
@@ -106,7 +108,7 @@ def forensic(data, table):
 def disableAccount(userName):
     print "No action added"
         # Deactivate AccessKey or add deny policy using iam
-    client = boto3.client('dynamodb')
+    client = boto3.client('iam')
     response = client.put_user_policy(
         UserName=userName,
         PolicyName='BlockPolicy',
