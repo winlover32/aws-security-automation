@@ -6,14 +6,10 @@ or in the "license" file accompanying this file. This file is distributed on an 
 '''
 
 import boto3
-import json
 
-
-client = boto3.client('cloudtrail')
+LOGTABLE = "cweCloudTrailLog"
 
 def lambda_handler(event, context):
-
-    logTable = "cweCloudTrailLog"
 
     # Extract user info from the event
     trailArn = event['detail']['requestParameters']['name']
@@ -31,8 +27,7 @@ def lambda_handler(event, context):
     userAgent = event['detail']['userAgent']
     sourceIP = event['detail']['sourceIPAddress']
     logData = {}
-    logData = {'trailArn' : trailArn, 'userName' : userName, 'userArn' : userArn, 'accessKeyId' : accessKeyId, 'trailArn' : trailArn, 'region' : region, 'account' : account, 'eventTime' : eventTime, 'userAgent' : userAgent, 'sourceIP' : sourceIP}
-
+    logData = {'trailArn' : trailArn, 'userName' : userName, 'userArn' : userArn, 'accessKeyId' : accessKeyId, 'region' : region, 'account' : account, 'eventTime' : eventTime, 'userAgent' : userAgent, 'sourceIP' : sourceIP}
 
 
     # Priority action
@@ -42,15 +37,25 @@ def lambda_handler(event, context):
     result = sendAlert(logData)
 
     # Forensics
-    result = forensic(logData)
-    
+    logTable = verifyLogTable()
+    result = forensic(logData, logTable)
+
     # Logging
-    result = logEvent(logData)
+    result = logEvent(logData, logTable)
     return result
 
 
+def verifyLogTable():
+    # Find table
+    client = boto3.client('dynamodb')
+    response = client.list_tables()
+    for i in range(len(response['TableNames'])):
+        if LOGTABLE in response['TableNames'][i]:
+            return response['TableNames'][i]
+    return LOGTABLE
 
 def startTrail(trailArn):
+    client = boto3.client('cloudtrail')
     response = client.get_trail_status(
         Name=trailArn
     )
@@ -66,39 +71,34 @@ def startTrail(trailArn):
         return "Trail started"
 
 
-def sendAlert(logdata):
+def sendAlert(data):
     # Placeholder for alert function.
     # This could be Amazon SNS, SMS, Email or adding to a ticket tracking system like Jira or Remedy.
     print "No alert"
     return 0
 
 
-def forensic(logdata):
+def forensic(data, table):
     # Placeholder for forensic.
     # Examples: Look for MFA, Look for previous violations, your corporate CIDR blocks etc.
     remediationStatus = True
-    
+
     # Placeholder for forensic like has the user done this before etc
     # Set remediationStatus to True to trigger remediation function
     if remediationStatus: #If needed, disable users access keys
-        # Find table
-        response = client.list_tables()
-        logTable = ""
-        for i in range(len(response['TableNames'])):
-            if logTable in response['TableNames'][i]:
-                logTable = response['TableNames'][i]
         # See if user have tried this before
+        client = boto3.client('dynamodb')
         response = client.get_item(
-            TableName=logTable,
+            TableName=table,
             Key={
-                'userName': {'S':logdata['userName']}
+                'userName': {'S':data['userName']}
             }
         )
         try:
             if response['Item']:
-                result = disableAccount(logdata['userName'])
+                result = disableAccount(data['userName'])
                 return result
-        except: 
+        except:
             # First time incident
             return "NoRemediationNeeded"
 
@@ -106,15 +106,16 @@ def forensic(logdata):
 def disableAccount(userName):
     print "No action added"
         # Deactivate AccessKey or add deny policy using iam
-        response = client.put_user_policy(
-            UserName=userName,
-            PolicyName='BlockPolicy',
-            PolicyDocument={"Version":"2012-10-17","Statement":{"Effect":"Deny","Action":"*","Resource":"*"}}
-        )
+    client = boto3.client('dynamodb')
+    response = client.put_user_policy(
+        UserName=userName,
+        PolicyName='BlockPolicy',
+        PolicyDocument={"Version":"2012-10-17", "Statement":{"Effect":"Deny", "Action":"*", "Resource":"*"}}
+    )
     return 0
 
 
-def logEvent(logData):
+def logEvent(logData, table):
     client = boto3.client('dynamodb')
     resource = boto3.resource('dynamodb')
 
@@ -124,38 +125,38 @@ def logEvent(logData):
     # Verify that the table exists
     tableExists = False
     try:
-        result = client.describe_table(TableName=logTable)
+        result = client.describe_table(TableName=table)
         tableExists = True
     except:
         # Table does not exist, create it
         table = resource.create_table(
-            TableName = logTable,
-            KeySchema = [
+            TableName=table,
+            KeySchema=[
                 {'AttributeName': 'userName', 'KeyType': 'HASH'},
                 {'AttributeName': 'eventTime', 'KeyType': 'RANGE'}
             ],
-            AttributeDefinitions = [
-                {'AttributeName': 'userName', 'AttributeType': 'S' },
-                {'AttributeName': 'eventTime', 'AttributeType': 'S' }
+            AttributeDefinitions=[
+                {'AttributeName': 'userName', 'AttributeType': 'S'},
+                {'AttributeName': 'eventTime', 'AttributeType': 'S'}
             ],
-            ProvisionedThroughput={'ReadCapacityUnits': 5,'WriteCapacityUnits': 5}
+            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
         )
 
         # Wait for table creation
-        table.meta.client.get_waiter('table_exists').wait(TableName=logTable)
+        table.meta.client.get_waiter('table_exists').wait(TableName=table)
         tableExists = True
 
     # Store data
     response = client.put_item(
-        TableName=logTable,
+        TableName=table,
         Item={
-            'userName' : { 'S': logData['userName']},
-            'eventTime' : { 'S': logData['eventTime']},
-            'userArn' : { 'S': logData['userArn']},
-            'region' : { 'S': logData['region']},
-            'account' : { 'S': logData['account']},
-            'userAgent' : { 'S': logData['userAgent']},
-            'sourceIP' : { 'S': logData['sourceIP']}
-        }     
+            'userName' : {'S': logData['userName']},
+            'eventTime' : {'S': logData['eventTime']},
+            'userArn' : {'S': logData['userArn']},
+            'region' : {'S': logData['region']},
+            'account' : {'S': logData['account']},
+            'userAgent' : {'S': logData['userAgent']},
+            'sourceIP' : {'S': logData['sourceIP']}
+        }
     )
     return 0
