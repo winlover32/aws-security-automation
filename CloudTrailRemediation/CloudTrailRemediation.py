@@ -3,6 +3,9 @@ Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance with the License. A copy of the License is located at
     http://aws.amazon.com/apache2.0/
 or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+Attributes:
+    LOGTABLE (str): Description
 '''
 
 import boto3
@@ -10,7 +13,15 @@ import boto3
 LOGTABLE = "cweCloudTrailLog"
 
 def lambda_handler(event, context):
-
+    """Summary
+    
+    Args:
+        event (TYPE): Description
+        context (TYPE): Description
+    
+    Returns:
+        TYPE: Description
+    """
     # Extract user info from the event
     trailArn = event['detail']['requestParameters']['name']
     try:
@@ -46,17 +57,32 @@ def lambda_handler(event, context):
 
 
 def verifyLogTable():
-    # Find table
+    """Verifies if the table name provided is deployed using CloudFormation 
+       template and thereby have a prefix and suffix in the name.
+    
+    Returns: 
+        The real table name
+        TYPE: String
+    """
     client = boto3.client('dynamodb')
     response = client.list_tables()
     table = LOGTABLE
-    for i in range(len(response['TableNames'])):
-        if table in response['TableNames'][i]:
-            table = response['TableNames'][i]
+    for n in enumerate(response['TableNames']):
+        if table in response['TableNames'][n]:
+            table = response['TableNames'][n]
     return table
 
 
 def startTrail(trailArn):
+    """Priority action.
+       Verifies if the provided trail is running and if not starts it.
+    
+    Args:
+        trailArn (String): ARN for the triggered trail.
+    
+    Returns:
+        TYPE: String
+    """
     client = boto3.client('cloudtrail')
     response = client.get_trail_status(
         Name=trailArn
@@ -74,21 +100,36 @@ def startTrail(trailArn):
 
 
 def sendAlert(data):
-    # Placeholder for alert function.
-    # This could be Amazon SNS, SMS, Email or adding to a ticket tracking system like Jira or Remedy.
+    """Placeholder for alert functionality.
+       This could be Amazon SNS, SMS, Email or adding to a ticket tracking 
+       system like Jira or Remedy.
+       You can also use a separate target using CloudWatch Event for alerts.
+    
+    Args:
+        data (dict): All extracted event info.
+    
+    Returns:
+        TYPE: String
+    """
     print "No alert"
     return 0
 
 
 def forensic(data, table):
-    # Placeholder for forensic.
-    # Examples: Look for MFA, Look for previous violations, your corporate CIDR blocks etc.
+    """Perform forensic on the resources and details in the event information.
+       Example: Look for MFA, previous violations, corporate CIDR blocks etc.
+    Args:
+        data (dict): All extracted event info.
+        table (string): Table name for event history.
+    
+    Returns:
+        TYPE: String
+    """
+    # Set remediationStatus to True to trigger remediation function.
     remediationStatus = True
 
-    # Placeholder for forensic like has the user done this before etc
-    # Set remediationStatus to True to trigger remediation function
-    if remediationStatus: #If needed, disable users access keys
-        # See if user have tried this before
+    if remediationStatus:
+        # See if user have tried this before.
         client = boto3.client('dynamodb')
         response = client.get_item(
             TableName=table,
@@ -98,16 +139,25 @@ def forensic(data, table):
         )
         try:
             if response['Item']:
+                # If not first time, trigger countermeasures.
                 result = disableAccount(data['userName'])
                 return result
         except:
-            # First time incident
+            # First time incident, let it pass.
             return "NoRemediationNeeded"
 
 
 def disableAccount(userName):
-    print "No action added"
-        # Deactivate AccessKey or add deny policy using iam
+    """Countermeasure function that disables the user by applying an 
+       inline IAM deny policy on the user.
+       policy.
+    
+    Args:
+        userName (string): Username that caused event.
+    
+    Returns:
+        TYPE: Success
+    """
     client = boto3.client('iam')
     response = client.put_user_policy(
         UserName=userName,
@@ -118,11 +168,17 @@ def disableAccount(userName):
 
 
 def logEvent(logData, table):
+    """Log all information to the provided DynamoDB table.
+    
+    Args:
+        logData (dict): All extracted information
+        table (string): Table name for event history.
+    
+    Returns:
+        TYPE: Success
+    """
     client = boto3.client('dynamodb')
     resource = boto3.resource('dynamodb')
-
-    # Name of the table to use
-    response = client.list_tables()
 
     # Verify that the table exists
     tableExists = False
