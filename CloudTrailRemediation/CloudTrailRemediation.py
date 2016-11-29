@@ -162,7 +162,7 @@ def disableAccount(userName):
     response = client.put_user_policy(
         UserName=userName,
         PolicyName='BlockPolicy',
-        PolicyDocument={"Version":"2012-10-17", "Statement":{"Effect":"Deny", "Action":"*", "Resource":"*"}}
+        PolicyDocument='{"Version":"2012-10-17", "Statement":{"Effect":"Deny", "Action":"*", "Resource":"*"}}'
     )
     return 0
 
