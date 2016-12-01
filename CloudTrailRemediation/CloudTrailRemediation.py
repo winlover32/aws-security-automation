@@ -7,18 +7,19 @@ or in the "license" file accompanying this file. This file is distributed on an 
 Attributes:
     LOGTABLE (str): Description
 '''
-
+from __future__ import print_function
 import boto3
 
 LOGTABLE = "cweCloudTrailLog"
 
+
 def lambda_handler(event, context):
     """Summary
-    
+
     Args:
         event (TYPE): Description
         context (TYPE): Description
-    
+
     Returns:
         TYPE: Description
     """
@@ -31,15 +32,13 @@ def lambda_handler(event, context):
         userName = event['detail']['userIdentity']['sessionContext']['sessionIssuer']['userName']
     userArn = event['detail']['userIdentity']['arn']
     accessKeyId = event['detail']['userIdentity']['accessKeyId']
-    trailArn = event['detail']['requestParameters']['name']
     region = event['region']
     account = event['account']
     eventTime = event['detail']['eventTime']
     userAgent = event['detail']['userAgent']
     sourceIP = event['detail']['sourceIPAddress']
     logData = {}
-    logData = {'trailArn' : trailArn, 'userName' : userName, 'userArn' : userArn, 'accessKeyId' : accessKeyId, 'region' : region, 'account' : account, 'eventTime' : eventTime, 'userAgent' : userAgent, 'sourceIP' : sourceIP}
-
+    logData = {'trailArn': trailArn, 'userName': userName, 'userArn': userArn, 'accessKeyId': accessKeyId, 'region': region, 'account': account, 'eventTime': eventTime, 'userAgent': userAgent, 'sourceIP': sourceIP}
 
     # Priority action
     startTrail(trailArn)
@@ -57,17 +56,17 @@ def lambda_handler(event, context):
 
 
 def verifyLogTable():
-    """Verifies if the table name provided is deployed using CloudFormation 
+    """Verifies if the table name provided is deployed using CloudFormation
        template and thereby have a prefix and suffix in the name.
-    
-    Returns: 
+
+    Returns:
         The real table name
         TYPE: String
     """
     client = boto3.client('dynamodb')
     response = client.list_tables()
     table = LOGTABLE
-    for n in enumerate(response['TableNames']):
+    for n, _ in enumerate(response['TableNames']):
         if table in response['TableNames'][n]:
             table = response['TableNames'][n]
     return table
@@ -76,10 +75,10 @@ def verifyLogTable():
 def startTrail(trailArn):
     """Priority action.
        Verifies if the provided trail is running and if not starts it.
-    
+
     Args:
         trailArn (String): ARN for the triggered trail.
-    
+
     Returns:
         TYPE: String
     """
@@ -101,13 +100,13 @@ def startTrail(trailArn):
 
 def sendAlert(data):
     """Placeholder for alert functionality.
-       This could be Amazon SNS, SMS, Email or adding to a ticket tracking 
+       This could be Amazon SNS, SMS, Email or adding to a ticket tracking
        system like Jira or Remedy.
        You can also use a separate target using CloudWatch Event for alerts.
-    
+
     Args:
         data (dict): All extracted event info.
-    
+
     Returns:
         TYPE: String
     """
@@ -121,7 +120,7 @@ def forensic(data, table):
     Args:
         data (dict): All extracted event info.
         table (string): Table name for event history.
-    
+
     Returns:
         TYPE: String
     """
@@ -134,7 +133,7 @@ def forensic(data, table):
         response = client.get_item(
             TableName=table,
             Key={
-                'userName': {'S':data['userName']}
+                'userName': {'S': data['userName']}
             }
         )
         try:
@@ -148,13 +147,13 @@ def forensic(data, table):
 
 
 def disableAccount(userName):
-    """Countermeasure function that disables the user by applying an 
+    """Countermeasure function that disables the user by applying an
        inline IAM deny policy on the user.
        policy.
-    
+
     Args:
         userName (string): Username that caused event.
-    
+
     Returns:
         TYPE: Success
     """
@@ -169,11 +168,11 @@ def disableAccount(userName):
 
 def logEvent(logData, table):
     """Log all information to the provided DynamoDB table.
-    
+
     Args:
         logData (dict): All extracted information
         table (string): Table name for event history.
-    
+
     Returns:
         TYPE: Success
     """
@@ -191,11 +190,9 @@ def logEvent(logData, table):
             TableName=table,
             KeySchema=[
                 {'AttributeName': 'userName', 'KeyType': 'HASH'},
-                {'AttributeName': 'eventTime', 'KeyType': 'RANGE'}
             ],
             AttributeDefinitions=[
                 {'AttributeName': 'userName', 'AttributeType': 'S'},
-                {'AttributeName': 'eventTime', 'AttributeType': 'S'}
             ],
             ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
         )
@@ -208,13 +205,13 @@ def logEvent(logData, table):
     response = client.put_item(
         TableName=table,
         Item={
-            'userName' : {'S': logData['userName']},
-            'eventTime' : {'S': logData['eventTime']},
-            'userArn' : {'S': logData['userArn']},
-            'region' : {'S': logData['region']},
-            'account' : {'S': logData['account']},
-            'userAgent' : {'S': logData['userAgent']},
-            'sourceIP' : {'S': logData['sourceIP']}
+            'userName': {'S': logData['userName']},
+            'eventTime': {'S': logData['eventTime']},
+            'userArn': {'S': logData['userArn']},
+            'region': {'S': logData['region']},
+            'account': {'S': logData['account']},
+            'userAgent': {'S': logData['userAgent']},
+            'sourceIP': {'S': logData['sourceIP']}
         }
     )
     return 0
