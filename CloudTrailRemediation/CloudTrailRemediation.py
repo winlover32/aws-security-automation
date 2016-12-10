@@ -37,7 +37,6 @@ def lambda_handler(event, context):
     eventTime = event['detail']['eventTime']
     userAgent = event['detail']['userAgent']
     sourceIP = event['detail']['sourceIPAddress']
-    logData = {}
     logData = {'trailArn': trailArn, 'userName': userName, 'userArn': userArn, 'accessKeyId': accessKeyId, 'region': region, 'account': account, 'eventTime': eventTime, 'userAgent': userAgent, 'sourceIP': sourceIP}
 
     # Priority action
