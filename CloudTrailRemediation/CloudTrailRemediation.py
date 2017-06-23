@@ -63,11 +63,34 @@ def verifyLogTable():
         TYPE: String
     """
     client = boto3.client('dynamodb')
-    response = client.list_tables()
+    resource = boto3.resource('dynamodb')
     table = LOGTABLE
+
+    response = client.list_tables()
+    tableFound = False
     for n, _ in enumerate(response['TableNames']):
         if table in response['TableNames'][n]:
             table = response['TableNames'][n]
+            tableFound = True
+
+    if not tableFound:
+        # Table not created in CFn, let's check exact name or create it
+        try:
+            result = client.describe_table(TableName=table)
+        except:
+            # Table does not exist, create it
+            newtable = resource.create_table(
+                TableName=table,
+                KeySchema=[
+                    {'AttributeName': 'userName', 'KeyType': 'HASH'},
+                ],
+                AttributeDefinitions=[
+                    {'AttributeName': 'userName', 'AttributeType': 'S'},
+                ],
+                ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
+            )
+            # Wait for table creation
+            newtable.meta.client.get_waiter('table_exists').wait(TableName=table)
     return table
 
 
@@ -176,29 +199,6 @@ def logEvent(logData, table):
         TYPE: Success
     """
     client = boto3.client('dynamodb')
-    resource = boto3.resource('dynamodb')
-
-    # Verify that the table exists
-    tableExists = False
-    try:
-        result = client.describe_table(TableName=table)
-        tableExists = True
-    except:
-        # Table does not exist, create it
-        table = resource.create_table(
-            TableName=table,
-            KeySchema=[
-                {'AttributeName': 'userName', 'KeyType': 'HASH'},
-            ],
-            AttributeDefinitions=[
-                {'AttributeName': 'userName', 'AttributeType': 'S'},
-            ],
-            ProvisionedThroughput={'ReadCapacityUnits': 5, 'WriteCapacityUnits': 5}
-        )
-
-        # Wait for table creation
-        table.meta.client.get_waiter('table_exists').wait(TableName=table)
-        tableExists = True
 
     # Store data
     response = client.put_item(
