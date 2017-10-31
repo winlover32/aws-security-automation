@@ -1,6 +1,11 @@
 # aws-security-automation
 Collection of scripts and resources for DevSecOps, Security Automation and Automated Incident Response Remediation
 
+## CloudTrailRemediation
+Demo script to automatically restart CloudTrail. The script have placeholders for forensics etc. to avoid enabling CloudTrail without finding the causing user.
+
+## force-user-mfa
+Demo script to automatically create and attach virtual MFA to any newly created IAM user. The use can fetch the MFA Seed themselves using AWS CLI.
 
 ***
 
