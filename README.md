@@ -1,6 +1,14 @@
 # aws-security-automation
 Collection of scripts and resources for DevSecOps, Security Automation and Automated Incident Response Remediation
 
+## IAM Access Denied Responder
+
+This example solution will setup an automated response to an access denied event that occurs within a CloudTrail event, a Failed authentication attempt to the AWS console, or a Client.UnauthorizedOperation event occurs.
+
+## EC2 Auto Clean Room Forensics
+
+This example solution will take an instance ID from an SNS topic and through a series of AWS Lambda functions co-ordinated by AWS Step Functions will automatically notify, isolate and run basic forensics on the identified instance.  
+
 ## CloudTrailRemediation
 Demo script to automatically restart CloudTrail. The script have placeholders for forensics etc. to avoid enabling CloudTrail without finding the causing user.
 
