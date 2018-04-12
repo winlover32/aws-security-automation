@@ -1,6 +1,7 @@
 # EC2 Auto Clean Room Forensics
 
 This example solution will take an instance ID from an SNS topic and through a series of AWS Lambda functions co-ordinated by AWS Step Functions will automatically notify, isolate and run basic forensics on the identified instance.
+Please note: The instructions on how to create the forensics instance AMI will be published here soon.
 
 # Overall Architecture 
 ![Logo](Clean-Room-Forensic-Architecture.png)
