@@ -18,7 +18,10 @@ import boto3
 import json
 import logging
 import os
-import requests
+
+from base64 import b64decode
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 
 client = boto3.client('s3')
 
@@ -33,13 +36,19 @@ def lambda_handler(event, context):
     targetGroupArn = event['targetGroupArn']
     slack_message_text = formatMyMessage(instanceID, targetGroupArn)
     # slack_message_text = response
-    response = requests.post(HOOK_URL, data=json.dumps(slack_message_text), headers={'Content-Type': 'application/json'})
-    logging.info("Response Status Code: ")
-    # logging.info(response.status_code)
+    req = Request(HOOK_URL, json.dumps(slack_message_text).encode('utf-8'))
+    try:
+        response = urlopen(req)
+        response.read()
+        logger.info("Message posted to %s", SLACK_CHANNEL)
+    except HTTPError as e:
+        logger.error("Request failed: %d %s", e.code, e.reason)
+    except URLError as e:
+        logger.error("Server connection failed: %s", e.reason)
+ 
     return event
 
 def formatMyMessage(instanceID, targetGroupArn):
-
     slack_message = {
         "attachments": [
             {
