@@ -39,10 +39,9 @@ Parameters:
     Type: String
     Description: Node Runtime
     Default: nodejs6.10
-  AMIID:
+  AmiId:
     Type: String
-    Description: AMI Details
-    Default: ami-c3d113a1
+    Description: AMI to use when launching the forensics instance
   instanceProfile:
     Type: String
     Description: Instance Profile Details Details
@@ -63,7 +62,6 @@ Parameters:
   lambdas3bucketsname:
     Type: String
     Description: Bucket name where lambda functions reside
-    Default: sydney-summit-incident-response
   lambdas3keyname:
     Type: String
     Description: Key name of lambda functions in S3
@@ -76,6 +74,16 @@ Parameters:
     Default: 0.0.0.0/0
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  Ec2KeyPair:
+    Type: String
+    Description: Key pair to use in starting a new instance
+  OutputS3Bucket:
+    Type: String
+    Description: Name of S3 bucket where forensic analysis report will be stored
+  OutputS3BucketRegion:
+    Type: String
+    Description: Output S3 bucket region
+
 Mappings: {}
 Resources:
   IncidentResponseStepFunction:
@@ -332,8 +340,10 @@ Resources:
           Ref: lambdas3keyname
       Environment:
         Variables:
-          ISOLATED_SECUTRITYGROUP:
-            Ref: IsolatedInstanceSecurityGroup
+          OUTPUT_S3_BUCKETNAME:
+            Ref: OutputS3Bucket
+          OUTPUT_S3_BUCKETREGION:
+            Ref: OutputS3BucketRegion
     Type: AWS::Lambda::Function
   createRemediationStepsLambda:
     Properties:
@@ -399,15 +409,18 @@ Resources:
           Ref: lambdas3keyname
       Environment:
         Variables:
-          ISOLATED_SECUTRITYGROUP:
-            Ref: IsolatedInstanceSecurityGroup
+          FORENSIC_SECUTRITYGROUP:
+            Ref: InstanceSecurityGroup
           AMI_ID:
-            Ref: AMIID
+            Ref: AmiId
           INSTANCE_PROFILE:
             Ref: instanceProfile
           SUBNET_ID:
             Ref: Subnet
+          EC2_KEYPAIR:
+            Ref: Ec2KeyPair
     Type: AWS::Lambda::Function
+    DependsOn: InstanceSecurityGroup
   CreateAndAttachAffectedVolume:
     Properties:
       FunctionName: sec-ir-6-createAndAttachAffectedVolume
